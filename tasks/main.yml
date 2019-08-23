@@ -1,0 +1,124 @@
+---
+- name: Check variables are defined
+  assert:
+    that:
+      - "prometheus_release_version is defined"
+      - "prometheus_user is defined"
+      - "prometheus_group is defined"
+      - "prometheus_config_dir is defined"
+      - "prometheus_db_dir is defined"
+
+- name: Get the Prometheus release version from GitHub
+  uri:
+    url: https://api.github.com/repos/prometheus/prometheus/releases/{{ prometheus_release_version }}
+    return_content: true
+    status_code: 200
+    body_format: json
+
+  register: prometheus_release
+
+- name: Get Prometheus version
+  set_fact:
+    prometheus_version: "{{ prometheus_release.json.tag_name }}"
+    prometheus_version_number: "{{ prometheus_release.json.tag_name[1:] }}"
+
+- name: Create the Prometheus group
+  group:
+    name: "{{ prometheus_group }}"
+
+- name: Create the Prometheus user
+  user:
+    name: "{{ prometheus_user }}"
+    create_home: false
+    shell: /bin/false
+    group: "{{ prometheus_group }}"
+
+- name: Create the Prometheus application dirs
+  file:
+    path: "{{ item }}"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    state: directory
+    mode: 0755
+  with_items:
+    - "{{ prometheus_config_dir }}"
+    - "{{ prometheus_db_dir }}"
+
+- name: Create extraction dir
+  file:
+    path: /tmp
+    state: directory
+
+- name: Extract the package files
+  unarchive:
+    src: https://github.com/prometheus/prometheus/releases/download/{{ prometheus_version }}/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
+    dest: /tmp
+    remote_src: yes
+
+- name: Copy the binaries
+  copy:
+    src: /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64/{{ item }}
+    dest: /usr/local/bin/
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0755
+    remote_src: yes
+  with_items:
+    - prometheus
+    - promtool
+
+- name: Copy the libraries
+  copy:
+    src: /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64/{{ item }}
+    dest: "{{ prometheus_config_dir }}"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    remote_src: yes
+  with_items:
+    - consoles
+    - console_libraries
+
+- name: Clean up files archive files
+  file:
+    path: "{{ item }}"
+    state: absent
+  with_items:
+    - /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64
+    - /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
+
+- name: Copy the configuration file
+  template:
+    src: prometheus.yml.j2
+    dest: "{{ prometheus_config_dir }}/prometheus.yml"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0644
+
+- name: Copy the alert manager configuration file
+  copy:
+    src: alert.rules.yml
+    dest: "{{ prometheus_config_dir }}/alert.rules.yml"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: 0644
+  notify: restart_prometheus
+
+- name: Copy the systemd service
+  template:
+    src: prometheus.service
+    dest: /etc/systemd/system/prometheus.service
+  notify: systemd_reload
+
+- name: Enable and start Prometheus
+  service:
+    name: prometheus
+    state: started
+    enabled: yes
+
+- name: Check if prometheus is accessible
+  uri:
+    url: http://localhost:9090
+    method: GET
+    status_code: 200
+  retries: 3
+  delay: 3
