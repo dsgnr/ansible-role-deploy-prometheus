@@ -16,4 +16,4 @@ install:
   - pip install molecule docker
 
 script:
-  - molecule lint
+  - molecule check

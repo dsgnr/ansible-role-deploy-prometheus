@@ -4,8 +4,10 @@
     name: prometheus
     state: restarted
   listen: restart_prometheus
+  when: prom_syntax_check.rc == 0
 
 - name: Reload systemd
   systemd:
     daemon_reload: yes
-  listen: systemd_reload
+  listen: reload_systemd
+  when: copy_systemd_service.changed
