@@ -21,6 +21,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install molecule docker
-    - name: Molecule lint
+    - name: Molecule Check
       run: |
-        molecule lint
+        cd ../; mv ansible-role-deploy-prometheus deploy-prometheus; cd deploy-prometheus; molecule check
