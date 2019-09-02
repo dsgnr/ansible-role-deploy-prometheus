@@ -8,7 +8,7 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-{% if groups['monitoring'] %}
+{% if groups['monitoring'] is defined %}
   - job_name: 'node_exporter'
     scrape_interval: 5s
     static_configs:
@@ -18,7 +18,7 @@ scrape_configs:
   {% endfor %}
 {% endif %}
 
-{% if groups['databases'] %}
+{% if groups['databases'] is defined %}
   - job_name: 'databases'
     scrape_interval: 5s
     static_configs:

@@ -4,3 +4,5 @@ prometheus_group: prometheus
 prometheus_release_version: latest
 prometheus_config_dir: /etc/prometheus
 prometheus_db_dir: /var/lib/prometheus
+alert_manager_url: https://alerts.example.com
+slack_alert_webhook_url: https://hooks.slack.com/services/WEBHOOK_HASH

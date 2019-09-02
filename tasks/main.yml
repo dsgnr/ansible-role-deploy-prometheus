@@ -14,8 +14,8 @@
     return_content: true
     status_code: 200
     body_format: json
-
   register: prometheus_release
+  check_mode: no
 
 - name: Get Prometheus version
   set_fact:
@@ -44,16 +44,24 @@
     - "{{ prometheus_config_dir }}"
     - "{{ prometheus_db_dir }}"
 
-- name: Create extraction dir
+- name: Check /tmp exists
+  stat:
+    path: /tmp
+  register: check_tmp_exists
+
+- name: Create /tmp dir if it doesn't exist
   file:
     path: /tmp
     state: directory
+  when: not check_tmp_exists.stat.exists
 
 - name: Extract the package files
   unarchive:
     src: https://github.com/prometheus/prometheus/releases/download/{{ prometheus_version }}/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
     dest: /tmp
     remote_src: yes
+  check_mode: no
+  register: get_release
 
 - name: Copy the binaries
   copy:
@@ -66,6 +74,7 @@
   with_items:
     - prometheus
     - promtool
+  when: get_release is changed
 
 - name: Copy the libraries
   copy:
@@ -77,14 +86,13 @@
   with_items:
     - consoles
     - console_libraries
+  when: get_release is changed
 
 - name: Clean up files archive files
   file:
-    path: "{{ item }}"
+    path: /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64
     state: absent
-  with_items:
-    - /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64
-    - /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
+  when: get_release is changed
 
 - name: Copy the configuration file
   template:
@@ -101,13 +109,19 @@
     owner: "{{ prometheus_user }}"
     group: "{{ prometheus_group }}"
     mode: 0644
+
+- name: Check Prometheus syntax
+  command: "/usr/local/bin/promtool check config {{ prometheus_config_dir }}/prometheus.yml"
+  changed_when: false
+  register: prom_syntax_check
   notify: restart_prometheus
 
 - name: Copy the systemd service
   template:
-    src: prometheus.service
+    src: prometheus.service.j2
     dest: /etc/systemd/system/prometheus.service
-  notify: systemd_reload
+  register: copy_systemd_service
+  notify: reload_systemd
 
 - name: Enable and start Prometheus
   service:
