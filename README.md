@@ -1,5 +1,8 @@
 # Ansible Role: Deploy Prometheus
 
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fdsgnr%2Fansible-role-deploy-prometheus%2Fbadge&style=flat)](https://actions-badge.atrox.dev/dsgnr/ansible-role-deploy-prometheus/goto)
+[![Build Status](https://travis-ci.org/dsgnr/ansible-role-deploy-prometheus.svg?branch=master)](https://travis-ci.org/dsgnr/ansible-role-deploy-prometheus)
+
 This role deploys the Prometheus monitoring package on a device. The devices added to the monitoring list in `prometheus.yml` are collected from the Ansible inventory file. The default groups are `monitoring` and `databases`. Customise these to suit your needs.
 
 ## Requirements
