@@ -14,6 +14,8 @@
     return_content: true
     status_code: 200
     body_format: json
+  delegate_to: localhost
+  run_once: true
   register: prometheus_release
   check_mode: no
 
@@ -44,24 +46,24 @@
     - "{{ prometheus_config_dir }}"
     - "{{ prometheus_db_dir }}"
 
-- name: Check /tmp exists
-  stat:
-    path: /tmp
-  register: check_tmp_exists
-
-- name: Create /tmp dir if it doesn't exist
+- name: Ensure /tmp exists
   file:
     path: /tmp
     state: directory
-  when: not check_tmp_exists.stat.exists
 
-- name: Extract the package files
-  unarchive:
-    src: https://github.com/prometheus/prometheus/releases/download/{{ prometheus_version }}/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
+- name: Download the package files
+  get_url:
+    url: https://github.com/prometheus/prometheus/releases/download/{{ prometheus_version }}/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
     dest: /tmp
-    remote_src: yes
   check_mode: no
+  delegate_to: localhost
   register: get_release
+
+- name: Upload the archive
+  unarchive:
+    src: /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64.tar.gz
+    dest: /tmp
+  when: get_release is changed
 
 - name: Copy the binaries
   copy:
@@ -92,6 +94,7 @@
   file:
     path: /tmp/prometheus-{{ prometheus_version_number }}.linux-amd64
     state: absent
+  delegate_to: localhost
   when: get_release is changed
 
 - name: Copy the configuration file

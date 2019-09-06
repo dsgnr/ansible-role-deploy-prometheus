@@ -1,7 +1,5 @@
 # Ansible Role: Deploy Prometheus
 
-[![Build Status](https://travis-ci.org/dsgnr/ansible-role-deploy-prometheus.svg?branch=master)](https://travis-ci.org/dsgnr/ansible-role-deploy-prometheus)
-
 This role deploys the Prometheus monitoring package on a device. The devices added to the monitoring list in `prometheus.yml` are collected from the Ansible inventory file. The default groups are `monitoring` and `databases`. Customise these to suit your needs.
 
 ## Requirements
@@ -17,7 +15,6 @@ This role deploys the Prometheus monitoring package on a device. The devices add
     prometheus_db_dir: /var/lib/prometheus
     alert_manager_url: https://alerts.example.com
     slack_alert_webhook_url: https://hooks.slack.com/services/WEBHOOK_HASH
-
 
 ## Example Playbook
 
